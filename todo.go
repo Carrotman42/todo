@@ -22,11 +22,13 @@ func main() {
 	http.HandleFunc("/new", PostNew)
 	http.HandleFunc("/markDone", markDone)
 	http.HandleFunc("/debug", TestPost)
+	http.HandleFunc("/resources/", HandleResource)
 	http.ListenAndServe(":16005", nil)
 }
 
 func MainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
+	write(w, CALENDAR_REQ)
 	write(w, NEW_TODO_HTML)
 	write(w, POST_FORM)
 	
@@ -51,10 +53,29 @@ func MainPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+const CALENDAR_REQ = `
+<head>
+<link type="text/css" rel="stylesheet" href="resources/dhtmlgoodies_calendar/dhtmlgoodies_calendar.css" media="screen"></LINK>
+<SCRIPT type="text/javascript" src="resources/dhtmlgoodies_calendar/dhtmlgoodies_calendar.js"></script>
+</head>
+`
+
+// These two must match
+const JS_TIME_FORMAT = `yyyy-mm-dd hh:ii`
+const GO_TIME_FORMAT = `2006-01-02 15:04`
+
 const NEW_TODO_HTML = `
 <form method="post" action="new">
 New Task Name: <input name="name" />
 <input type=submit value="Add" />
+<input type="text" readonly name="dueDate" />
+<input type="button" value="Cal" onclick="displayCalendar(dueDate,'` + JS_TIME_FORMAT + `',this,true)" />
+</form>
+`
+
+const POST_FORM = `
+<form id="doneform" action="markDone" method="POST">
+<input type="hidden" name="data" value="default value">
 </form>
 <script>
 function submitDone(index) {
@@ -65,11 +86,10 @@ function submitDone(index) {
 </script>
 `
 
-const POST_FORM = `
-<form id="doneform" action="markDone" method="POST">
-<input type="hidden" name="data" value="default value">
-</form>
-`
+func HandleResource(w http.ResponseWriter, r *http.Request) {
+	resource := r.URL.Path[1:]
+	http.ServeFile(w, r, resource)
+}
 
 func markDone (w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -90,6 +110,7 @@ func PostNew(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	
 	name := r.Form["name"][0]
+	//TODO: due := r.Form["dueDate"][0]
 	
 	newTodo := Todo{
 		Name: name,
